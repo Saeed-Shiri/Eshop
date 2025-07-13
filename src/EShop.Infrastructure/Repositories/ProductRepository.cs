@@ -58,6 +58,17 @@ public class ProductRepository : IProductRepository
         return products;
     }
 
+    public async Task MarkProductAsSold(Guid id)
+    {
+        var product = await _context.Products
+            .FindAsync(id);
+
+        if(product != null)
+            product.MarkAsSold();
+
+        await _context.SaveChangesAsync();
+    }
+
     public async Task UpdateAsync(Product product)
     {
         _context.Products

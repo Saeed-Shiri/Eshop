@@ -7,8 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Dtos\Basket\" />
-    <Folder Include="Dtos\Payment\" />
+    <Compile Remove="Dtos\**" />
+    <EmbeddedResource Remove="Dtos\**" />
+    <None Remove="Dtos\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Features\PaymentFeatures\Queries\" />
     <Folder Include="Features\ProductFetures\Commands\" />
   </ItemGroup>

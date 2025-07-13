@@ -21,7 +21,6 @@ public class Payment(
         Status = PaymentStatus.Completed;
         TransactionId = transactionId;
         Publish(new PaymentCompletedEvent(
-            Id,
             BasketId,
             TransactionId,
             Amount));
@@ -32,7 +31,6 @@ public class Payment(
         Status = PaymentStatus.Faied;
         Reason = reason;
         Publish(new PaymentFailedEvent(
-            Id,
             BasketId,
             Reason));
     }

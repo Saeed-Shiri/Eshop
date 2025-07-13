@@ -4,11 +4,10 @@ using Eshop.Domain.Exceptions;
 
 namespace Eshop.Domain.Entities;
 public class Product(
-    Guid id,
     string name,
     decimal price)
 {
-    public Guid Id { get; } = id;
+    public Guid Id { get; }
     public string Name { get; private set; } = name ?? throw new ProducNameNullException();
     public decimal Price { get; private set; } = price > 0 ? price : throw new ProductPriceNegativeException();
     public ProductStatus Status { get; private set; } = ProductStatus.Available;

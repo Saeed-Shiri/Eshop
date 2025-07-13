@@ -12,4 +12,6 @@ public interface IProductRepository
         bool includeLocked = false,
         bool includeSold = false,
         CancellationToken cancellationToken = default);
+
+    Task MarkProductAsSold(Guid id);
 }

@@ -1,11 +1,25 @@
+using Eshop.Api;
+using EShop.Application;
+using EShop.Infrastructure;
+using EShop.Infrastructure.Persistence;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services
+    .AddApiServices()
+    .AddApplicationServices()
+    .AddInfrastructureServices(builder.Configuration);
+
+await builder.Services
+    .MigrateDatabase(async (serviceProvider, dbContext) =>
+    {
+        var logger = serviceProvider
+        .GetRequiredService<ILogger<AppDbContext>>();
+
+        await AppDbContextSeeder.SeedAsync(dbContext, logger);
+    });
 
 var app = builder.Build();
 

@@ -22,7 +22,7 @@ public class BasketRepository : IBasketRepository
         var key = GetKey(userId);
 
         await _cache
-            .RemoveAsync($"basket:{userId}");
+            .RemoveAsync(key);
     }
 
     public async Task<Basket?> GetBasketAsync(Guid userId)

@@ -48,7 +48,6 @@ public sealed class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymen
             // 3. انتشار ایونت شکست پرداخت
             await _eventPublisher.PublishAsync(
                 new PaymentFailedEvent(
-                    paymentResult.PaymentId,
                     basket.Id,
                     paymentResult.Error));
 
@@ -58,13 +57,11 @@ public sealed class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymen
         // 4. انتشار ایونت موفقیت پرداخت
         await _eventPublisher.PublishAsync(
             new PaymentCompletedEvent(
-                paymentResult.PaymentId,
                 basket.Id,
                 paymentResult.TransactionId,
                 basket.TotalPrice));
 
         return Result.Ok(new PaymentResultDto(
-            paymentResult.PaymentId,
             paymentResult.TransactionId,
             basket.TotalPrice,
             DateTime.UtcNow));

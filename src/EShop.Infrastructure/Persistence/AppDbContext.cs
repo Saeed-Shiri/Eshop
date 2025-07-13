@@ -6,8 +6,11 @@ using Microsoft.EntityFrameworkCore;
 namespace EShop.Infrastructure.Persistence;
 public class AppDbContext : DbContext
 {
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    {
+        
+    }
     public DbSet<Product> Products { get; set; }
-    public DbSet<Payment> Payments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

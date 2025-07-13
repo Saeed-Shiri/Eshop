@@ -13,14 +13,14 @@ using System.Threading.Channels;
 namespace EShop.Infrastructure.Services.EventBus;
 public class RabbitMQEventPublisher : IEventPublisher, IAsyncDisposable
 {
-    private readonly ConnectionFactory _connectionFactory;
+    private readonly IConnectionFactory _connectionFactory;
     private IConnection? _connection;
     private IChannel? _channel;
     private readonly ILogger<RabbitMQEventPublisher> _logger;
     private const string QueueName = "payment_queue";
 
     public RabbitMQEventPublisher(
-        ConnectionFactory connectionFactory, 
+        IConnectionFactory connectionFactory, 
         ILogger<RabbitMQEventPublisher> logger)
     {
 
@@ -76,7 +76,7 @@ public class RabbitMQEventPublisher : IEventPublisher, IAsyncDisposable
                      routingKey: QueueName,
                      body: body);
 
-            _logger.LogInformation($"سبد خرید کاربر با آیدی {paymentEvent.UserId} به صصف پردازش ارسال شد");
+            _logger.LogInformation($"basket with userId {paymentEvent.UserId} sent to process");
         }
         catch (Exception ex)
         {

@@ -2,27 +2,31 @@
 
 using Eshop.Domain.Common;
 using Eshop.Domain.Exceptions;
+using System.Text.Json.Serialization;
 
 
 namespace Eshop.Domain.Entities;
+
 public class Basket : AggregateRoot
 {
     
     public Guid UserId { get; }
 
-    
-    private readonly List<BasketItem> _items = [];
-    public IReadOnlyList<BasketItem> Items => _items.AsReadOnly();
+
+
+    [JsonInclude]
+    public List<BasketItem> Items { get; private set; } = [];
 
     public DateTime CreatedAt { get; }
 
     public DateTime ExpiresAt { get; }
 
-    public decimal TotalPrice => _items.Sum(x => x.PriceAtAddition * x.Quantity);
+    public decimal TotalPrice => Items.Sum(x => x.PriceAtAddition * x.Quantity);
 
     public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
 
 
+    [JsonConstructor]
     public Basket(
         Guid id,
         Guid userId) : base(id)
@@ -48,13 +52,13 @@ public class Basket : AggregateRoot
             throw new BasketExpiredException();
 
 
-        var existingItem = _items.FirstOrDefault(x => x.ProductId == item.ProductId);
+        var existingItem = Items.FirstOrDefault(x => x.ProductId == item.ProductId);
 
         if (existingItem != null)
         {
             var newQuantity = existingItem.Quantity + item.Quantity;
-            _items.Remove(existingItem);
-            _items.Add(new BasketItem(
+            Items.Remove(existingItem);
+            Items.Add(new BasketItem(
                 item.ProductId, 
                 newQuantity, 
                 item.PriceAtAddition)
@@ -62,7 +66,7 @@ public class Basket : AggregateRoot
         }
         else 
         {
-            _items.Add(item);
+            Items.Add(item);
         }
 
         
@@ -70,16 +74,16 @@ public class Basket : AggregateRoot
 
     public void RemoveItem(Guid productId, int quantity = 1)
     {
-        var item = _items.FirstOrDefault(x => x.ProductId == productId);
+        var item = Items.FirstOrDefault(x => x.ProductId == productId);
 
         if (item == null)
             return;
 
-        _items.Remove(item);
+        Items.Remove(item);
 
         if (item.Quantity > quantity)
         {
-            _items.Add(new BasketItem(
+            Items.Add(new BasketItem(
                 item.ProductId,
                 item.Quantity - quantity,
                 item.PriceAtAddition
@@ -93,7 +97,7 @@ public class Basket : AggregateRoot
     public void Clear()
     {
 
-        _items.Clear();
+        Items.Clear();
     }
 
 }

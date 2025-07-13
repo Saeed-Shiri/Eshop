@@ -16,11 +16,12 @@ using Microsoft.Extensions.Logging;
 using Polly;
 using RabbitMQ.Client;
 using StackExchange.Redis;
+using Microsoft.Extensions.Hosting;
 
 namespace EShop.Infrastructure;
-public static class DependencyInjections
+public static class DependencyInjection
 {
-    public static async Task<IServiceCollection> AddInfrastructureServices(
+    public static IServiceCollection AddInfrastructureServices(
         this IServiceCollection services,
         IConfiguration configuration)
     {
@@ -37,6 +38,8 @@ public static class DependencyInjections
                     });
             });
 
+        
+
         // Redis
         services
             .AddStackExchangeRedisCache(options =>
@@ -52,19 +55,21 @@ public static class DependencyInjections
             .AddScoped<IProductRepository, ProductRepository>();
 
         // Services
-        var connectionFactory = new ConnectionFactory()
-        {
-            Uri = new Uri(configuration.GetConnectionString("RabbitMQ")!)
-        };
 
+
+        services.AddSingleton<IConnectionFactory>(sp =>
+        {
+            var config = sp.GetRequiredService<IConfiguration>();
+            return new ConnectionFactory
+            {
+                Uri = new Uri(config.GetConnectionString("RabbitMQ")!)
+            };
+        });
         services
             // redis lock service
             .AddScoped<IProductLockService, RedisProductLockService>()
-            //rabbitmq message bus
-            .AddSingleton<IEventPublisher>(sp =>
-                new RabbitMQEventPublisher(
-                    connectionFactory,
-                    sp.GetRequiredService<ILogger<RabbitMQEventPublisher>>()))
+            //rabbitmq event bus
+            .AddSingleton<IEventPublisher, RabbitMQEventPublisher>()
             // payment gateway
             .AddHttpClient<IPaymentGateway, ZarinpalPaymentGateway>(client =>
             {
@@ -74,6 +79,8 @@ public static class DependencyInjections
             .AddTransientHttpErrorPolicy(policy =>
                 policy.WaitAndRetryAsync(3, retryAttempt =>
                     TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
+        services
+            .AddHostedService<PaymentBackgroundService>();
 
         return services;
     }

@@ -3,6 +3,7 @@
 using Eshop.Domain.Events;
 using EShop.Application.Contracts.Repositories;
 using EShop.Application.Contracts.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
@@ -13,30 +14,27 @@ using System.Text.Json;
 namespace EShop.Infrastructure.Services.Payment;
 public class PaymentBackgroundService : BackgroundService
 {
-    private readonly IBasketRepository _basketRepository;
-    private readonly IProductRepository _productRepository;
-    private readonly IProductLockService _lockService;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IPaymentGateway _paymentGateway;
     private ILogger<PaymentBackgroundService> _logger;
     private readonly IConnectionFactory _connectionFactory;
-    private IConnection _connection;
-    private IChannel _channel;
+    private IConnection? _connection;
+    private IChannel? _channel;
     private const string QueueName = "payment_queue";
 
     public PaymentBackgroundService(
-        IBasketRepository basketRepository,
-        IProductRepository productRepository,
-        IProductLockService lockService,
+        IServiceScopeFactory scopeFactory,
+        IPaymentGateway paymentGateway,
         ILogger<PaymentBackgroundService> logger,
-        IConnectionFactory connectionFactory,
-        IPaymentGateway paymentGateway)
+        IConnectionFactory connectionFactory)
     {
-        _basketRepository = basketRepository;
-        _productRepository = productRepository;
-        _lockService = lockService;
+       
         _logger = logger;
         _connectionFactory = connectionFactory;
         _paymentGateway = paymentGateway;
+        _scopeFactory = scopeFactory;
+        _logger = logger;
+        _connectionFactory = connectionFactory;
     }
 
     public override async Task StartAsync(CancellationToken cancellationToken)
@@ -58,33 +56,62 @@ public class PaymentBackgroundService : BackgroundService
             var json = Encoding.UTF8.GetString(body);
             var message = JsonSerializer.Deserialize<PaymentStartedEvent>(json)!;
 
-            _logger.LogInformation($"آغاز پردازش پرداخت کاربر با آبدی {message.UserId}");
+            _logger.LogInformation($"start processing basket of user with Id {message.UserId}");
 
             try
             {
-                var basket = await _basketRepository.GetBasketAsync(message.UserId);
-                if (basket == null || !basket.Items.Any())
+                await using var scope = _scopeFactory.CreateAsyncScope();
+                var serviceProvider = scope.ServiceProvider;
+
+                var basketRepository = serviceProvider
+                .GetRequiredService<IBasketRepository>();
+
+                var productRepository = serviceProvider
+                .GetRequiredService<IProductRepository>();
+
+                var lockService = serviceProvider
+                .GetRequiredService<IProductLockService>();
+
+                var basket = await basketRepository
+                .GetBasketAsync(message.UserId);
+
+                if (basket == null)
                 {
-                    _logger.LogWarning($"هیچ سبد خریدی برای کابر با آیدی {message.UserId} یافت نشد");
+                    _logger.LogWarning($"there is no basket for user with Id {message.UserId}");
                     return;
                 }
 
                 // شبیه‌سازی پرداخت
-                var paymentResult = await _paymentGateway.ProcessPaymentAsync(
+                var paymentResult = await _paymentGateway
+                .ProcessPaymentAsync(
                     basket.TotalPrice,
                     "",
                     "");
 
                 if (paymentResult.IsSuccess)
                 {
-                    await _basketRepository.DeleteBasketAsync(message.UserId);
-                    //make products as sold
-                    //unlock products 
-                    _logger.LogInformation($"پرداخت برای کاربر با آیدی {message.UserId} با موفقیت انجام شد");
+                    // delete basket
+                    await basketRepository
+                    .DeleteBasketAsync(message.UserId);
+
+                    
+                    foreach (var item in basket.Items)
+                    {
+                        //mark products as sold
+                        await productRepository
+                        .MarkProductAsSold(item.ProductId);
+
+                        //unlock products 
+                        await lockService
+                        .UnlockProductAsync(item.ProductId);
+                    }
+
+
+                    _logger.LogInformation($"successful payment for user with Id {message.UserId}");
                 }
                 else
                 {
-                    _logger.LogInformation($"پرداخت برای کاربر با آیدی {message.UserId} با خطا مواجه شد");
+                    _logger.LogInformation($"failed payment for user with Id {message.UserId}");
                 }
 
             }
@@ -94,7 +121,7 @@ public class PaymentBackgroundService : BackgroundService
             }
         };
 
-        await _channel.BasicConsumeAsync(
+        await _channel!.BasicConsumeAsync(
             queue: QueueName,
             autoAck: true,
             consumer: consumer,
