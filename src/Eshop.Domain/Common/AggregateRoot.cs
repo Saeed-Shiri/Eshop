@@ -1,11 +1,15 @@
 ﻿
 
+
+
 using Eshop.Domain.Interfaces;
 
 namespace Eshop.Domain.Common;
 public class AggregateRoot : BaseEntity
 {
     private readonly List<IDomainEvent> _domainEvents = [];
+
+    protected AggregateRoot() : base() { }
 
     protected AggregateRoot(Guid id) : base(id) { }
 

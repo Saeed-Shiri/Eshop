@@ -5,22 +5,35 @@ using Eshop.Domain.Events;
 using Eshop.Domain.Exceptions;
 
 namespace Eshop.Domain.Entities;
-public class Payment(Guid id, Guid basketId, decimal amount) : AggregateRoot(id)
+public class Payment(
+    Guid basketId,
+    decimal amount) : AggregateRoot()
 {
     public Guid BasketId { get; } = basketId;
     public decimal Amount { get; } = amount > 0 ? amount : throw new PaymenAmountNegativetExceptions();
     public PaymentStatus Status { get; private set; } = PaymentStatus.Pending;
     public DateTime CreatedAt { get; } = DateTime.UtcNow;
+    public string TransactionId { get; set; }
+    public string Reason { get; set; }
 
-    public void MarkAsCompleted()
+    public void MarkAsCompleted(string transactionId)
     {
         Status = PaymentStatus.Completed;
-        Publish(new PaymentCompletedEvent(Id, BasketId, Amount));
+        TransactionId = transactionId;
+        Publish(new PaymentCompletedEvent(
+            Id,
+            BasketId,
+            TransactionId,
+            Amount));
     }
 
-    public void MarkAsFailed()
+    public void MarkAsFailed(string reason)
     {
         Status = PaymentStatus.Faied;
-        Publish(new PaymentFailedEvent(Id, BasketId));
+        Reason = reason;
+        Publish(new PaymentFailedEvent(
+            Id,
+            BasketId,
+            Reason));
     }
 }

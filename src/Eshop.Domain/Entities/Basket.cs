@@ -2,8 +2,7 @@
 
 using Eshop.Domain.Common;
 using Eshop.Domain.Exceptions;
-using Eshop.Domain.Interfaces.Services;
-using System;
+
 
 namespace Eshop.Domain.Entities;
 public class Basket : AggregateRoot
@@ -23,17 +22,24 @@ public class Basket : AggregateRoot
 
     public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
 
-    private readonly IProductLockService _productLockService;
 
-    public Basket(Guid id, Guid userId, IProductLockService productLockService) : base(id)
+    public Basket(
+        Guid id,
+        Guid userId) : base(id)
     {
         UserId = userId;
         CreatedAt = DateTime.UtcNow;
         ExpiresAt = CreatedAt.AddMinutes(10);
-        _productLockService = productLockService;
     }
 
-    public async Task AddItemAsync(BasketItem item)
+    public Basket(Guid userId) : base()
+    {
+        UserId = userId;
+        CreatedAt = DateTime.UtcNow;
+        ExpiresAt = CreatedAt.AddMinutes(10);
+    }
+
+    public void AddItem(BasketItem item)
     {
         if (item == null)
             throw new BasketItemNullException();
@@ -41,9 +47,6 @@ public class Basket : AggregateRoot
         if (IsExpired)
             throw new BasketExpiredException();
 
-        await _productLockService.LockProductAsync(
-            item.ProductId,
-            TimeSpan.FromMinutes(10));
 
         var existingItem = _items.FirstOrDefault(x => x.ProductId == item.ProductId);
 
@@ -65,40 +68,31 @@ public class Basket : AggregateRoot
         
     }
 
-    public async Task RemoveItem(Guid productId, int quantity = 1)
+    public void RemoveItem(Guid productId, int quantity = 1)
     {
         var item = _items.FirstOrDefault(x => x.ProductId == productId);
 
         if (item == null)
             return;
 
-        if (item.Quantity <= quantity)
-        {
-            _items.Remove(item);
+        _items.Remove(item);
 
-            // آزادسازی قفل اگر آیتم کاملاً حذف شد
-            await _productLockService.UnlockProductAsync(productId);
-        }
-        else
+        if (item.Quantity > quantity)
         {
-            _items.Remove(item);
             _items.Add(new BasketItem(
                 item.ProductId,
                 item.Quantity - quantity,
                 item.PriceAtAddition
             ));
+
         }
 
     }
 
     // تخلیه سبد خرید
-    public async Task ClearAsync()
+    public void Clear()
     {
-        // آزادسازی قفل همه محصولات
-        foreach (var item in _items)
-        {
-            await _productLockService.UnlockProductAsync(item.ProductId);
-        }
+
         _items.Clear();
     }
 

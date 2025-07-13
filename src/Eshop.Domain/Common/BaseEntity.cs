@@ -7,6 +7,12 @@ public abstract class BaseEntity
 {
     public Guid Id { get; protected set; }
 
+
+    protected BaseEntity()
+    {
+        
+    }
+
     protected BaseEntity(Guid id)
     {
         Id = id == Guid.Empty ? throw new DomainException("Id cannot be empty") : id;

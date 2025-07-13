@@ -1,6 +1,6 @@
 ﻿
 
-namespace Eshop.Domain.Interfaces.Services;
+namespace EShop.Application.Contracts.Services;
 public interface IProductLockService
 {
     /// <summary>
@@ -9,7 +9,12 @@ public interface IProductLockService
     Task LockProductAsync(Guid productId, TimeSpan duration);
 
     /// <summary>
-    /// آزادسازی قفل محصول (در صورت پرداخت ناموفق یا انقضا)
+    /// آزادسازی قفل محصول (در صورت پرداخت موفق یا انقضا)
     /// </summary>
     Task UnlockProductAsync(Guid productId);
+
+    /// <summary>
+    /// برگرداندن مدت زمان قفل محصول
+    /// </summary>
+    Task<DateTime?> GetLockExpiryAsync(Guid productId);
 }

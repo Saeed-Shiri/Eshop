@@ -5,7 +5,10 @@ using System.Linq;
 
 
 namespace Eshop.Domain.Entities;
-public class BasketItem(Guid productId, int quantity, decimal priceAtAddition)
+public class BasketItem(
+    Guid productId,
+    int quantity,
+    decimal priceAtAddition)
 {
     public Guid ProductId { get; } = productId;
     public int Quantity { get; } = quantity > 0 ? quantity : throw new BasketQuantityNegativeException();

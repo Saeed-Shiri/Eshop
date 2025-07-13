@@ -1,15 +1,15 @@
-﻿
-using Eshop.Domain.Entities;
+﻿using Eshop.Domain.Entities;
 
-namespace Eshop.Domain.Interfaces.Repositories;
+namespace EShop.Application.Contracts.Repositories;
 public interface IProductRepository
 {
     // عملیات پایه
-    Task<Product> GetByIdAsync(Guid id);
+    Task<Product?> GetByIdAsync(Guid id);
     Task UpdateAsync(Product product);
 
     // لیست محصولات با فیلترهای ضروری
     Task<IReadOnlyList<Product>> GetListAsync(
         bool includeLocked = false,
-        bool includeSold = false);
+        bool includeSold = false,
+        CancellationToken cancellationToken = default);
 }
